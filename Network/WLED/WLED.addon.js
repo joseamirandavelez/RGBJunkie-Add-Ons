@@ -469,80 +469,86 @@ function formatDateTime(format) {
 	return _format;
 }
 
+function __wledLhmNodeValue(node) {
+	return node && node.Value != null && node.Value !== '' ? node.Value : 'N/A';
+}
+
+function __wledBuildLhmPairsFromJson(datajson) {
+	var rawPairs = {
+		'cpu_load': __wledLhmNodeValue(findNodeWithParent(datajson, 'CPU Total', 'Load')),
+		'cpu_temp': __wledLhmNodeValue(findNodeWithParent(datajson, 'CPU Package', 'Temperatures')),
+		'mb_fan1': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #1', 'Fans')),
+		'mb_fan2': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #2', 'Fans')),
+		'mb_fan3': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #3', 'Fans')),
+		'mb_fan4': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #4', 'Fans')),
+		'mb_fan5': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #5', 'Fans')),
+		'mb_fan6': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #6', 'Fans')),
+		'mb_fan7': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #7', 'Fans')),
+		'mb_fan8': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #8', 'Fans')),
+		'mb_fan9': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #9', 'Fans')),
+		'mb_fan10': __wledLhmNodeValue(findNodeWithParent(datajson, 'Fan #10', 'Fans')),
+		'ram_load': __wledLhmNodeValue(findNodeWithParent(datajson, 'Memory', 'Load')),
+		'ram_used': __wledLhmNodeValue(findNodeWithParent(datajson, 'Memory Used', 'Data')),
+		'gpu_load': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Core', 'Load')),
+		'gpu_temp': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Core', 'Temperatures')),
+		'gpu_fan1': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Fan 1', 'Fans')),
+		'gpu_fan2': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Fan 2', 'Fans')),
+		'gpu_mem_load': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Memory', 'Load')),
+		'gpu_mem_used': __wledLhmNodeValue(findNodeWithParent(datajson, 'GPU Memory Used', 'Data')),
+	};
+	var displayPairs = {};
+	for (var k in rawPairs) {
+		if (!Object.prototype.hasOwnProperty.call(rawPairs, k)) continue;
+		var v = rawPairs[k];
+		displayPairs[k] = __wledFormatLhmSensorDisplay(v == null || v === '' ? 'N/A' : v);
+	}
+	return { rawPairs: rawPairs, displayPairs: displayPairs };
+}
+
+function __wledReformatLhmFromCache(format) {
+	try {
+		if (!lastLHMFetch || !lastLHMFetch.rawPairs) return;
+		var displayPairs = {};
+		for (var k in lastLHMFetch.rawPairs) {
+			if (!Object.prototype.hasOwnProperty.call(lastLHMFetch.rawPairs, k)) continue;
+			var v = lastLHMFetch.rawPairs[k];
+			displayPairs[k] = __wledFormatLhmSensorDisplay(v == null || v === '' ? 'N/A' : v);
+		}
+		lastLHMFetch.result = replaceEx(String(format || ''), displayPairs);
+	} catch (_e) {}
+}
+
 function formatLHM(format) {
 	const now = Date.now();
+	const interval = Math.max(500, Number(lhm_update) || 3000);
 
-	// If cache is fresh, return it
-	if (now - lastLHMFetch.time < lhm_update && lastLHMFetch.result !== null) {
+	if (now - lastLHMFetch.time < interval && lastLHMFetch.result != null) {
 		return lastLHMFetch.result;
 	}
 
-	// Trigger a refresh, but don't expect immediate result
-	XmlHttp.Get(`${lhmjson}/data.json`, (xhr) => {
-		if (xhr.readyState === 4) {
-			if (xhr.status === 200) {
-				const datajson = JSON.parse(xhr.response);
-
-				// CPU
-				const cpu_load = findNodeWithParent(datajson, 'CPU Total', 'Load');
-				const cpu_temp = findNodeWithParent(datajson, 'CPU Package', 'Temperatures');
-
-				// Fans
-				const mb_fan1 = findNodeWithParent(datajson, 'Fan #1', 'Fans');
-				const mb_fan2 = findNodeWithParent(datajson, 'Fan #2', 'Fans');
-				const mb_fan3 = findNodeWithParent(datajson, 'Fan #3', 'Fans');
-				const mb_fan4 = findNodeWithParent(datajson, 'Fan #4', 'Fans');
-				const mb_fan5 = findNodeWithParent(datajson, 'Fan #5', 'Fans');
-				const mb_fan6 = findNodeWithParent(datajson, 'Fan #6', 'Fans');
-				const mb_fan7 = findNodeWithParent(datajson, 'Fan #7', 'Fans');
-				const mb_fan8 = findNodeWithParent(datajson, 'Fan #8', 'Fans');
-				const mb_fan9 = findNodeWithParent(datajson, 'Fan #9', 'Fans');
-				const mb_fan10 = findNodeWithParent(datajson, 'Fan #10', 'Fans');
-
-				// RAM
-				const ram_load = findNodeWithParent(datajson, 'Memory', 'Load');
-				const ram_used = findNodeWithParent(datajson, 'Memory Used', 'Data');
-
-				// GPU
-				const gpu_load = findNodeWithParent(datajson, 'GPU Core', 'Load');
-				const gpu_temp = findNodeWithParent(datajson, 'GPU Core', 'Temperatures');
-				const gpu_fan1 = findNodeWithParent(datajson, 'GPU Fan 1', 'Fans');
-				const gpu_fan2 = findNodeWithParent(datajson, 'GPU Fan 2', 'Fans');
-				const gpu_mem_load = findNodeWithParent(datajson, 'GPU Memory', 'Load');
-				const gpu_mem_used = findNodeWithParent(datajson, 'GPU Memory Used', 'Data');
-
-				let _format = replaceEx(format, {
-					'cpu_load': __wledFormatLhmSensorDisplay(cpu_load ? cpu_load.Value : 'N/A'),
-					'cpu_temp': __wledFormatLhmSensorDisplay(cpu_temp ? cpu_temp.Value : 'N/A'),
-					'mb_fan1': __wledFormatLhmSensorDisplay(mb_fan1 ? mb_fan1.Value : 'N/A'),
-					'mb_fan2': __wledFormatLhmSensorDisplay(mb_fan2 ? mb_fan2.Value : 'N/A'),
-					'mb_fan3': __wledFormatLhmSensorDisplay(mb_fan3 ? mb_fan3.Value : 'N/A'),
-					'mb_fan4': __wledFormatLhmSensorDisplay(mb_fan4 ? mb_fan4.Value : 'N/A'),
-					'mb_fan5': __wledFormatLhmSensorDisplay(mb_fan5 ? mb_fan5.Value : 'N/A'),
-					'mb_fan6': __wledFormatLhmSensorDisplay(mb_fan6 ? mb_fan6.Value : 'N/A'),
-					'mb_fan7': __wledFormatLhmSensorDisplay(mb_fan7 ? mb_fan7.Value : 'N/A'),
-					'mb_fan8': __wledFormatLhmSensorDisplay(mb_fan8 ? mb_fan8.Value : 'N/A'),
-					'mb_fan9': __wledFormatLhmSensorDisplay(mb_fan9 ? mb_fan9.Value : 'N/A'),
-					'mb_fan10': __wledFormatLhmSensorDisplay(mb_fan10 ? mb_fan10.Value : 'N/A'),
-					'ram_load': __wledFormatLhmSensorDisplay(ram_load ? ram_load.Value : 'N/A'),
-					'ram_used': __wledFormatLhmSensorDisplay(ram_used ? ram_used.Value : 'N/A'),
-					'gpu_load': __wledFormatLhmSensorDisplay(gpu_load ? gpu_load.Value : 'N/A'),
-					'gpu_temp': __wledFormatLhmSensorDisplay(gpu_temp ? gpu_temp.Value : 'N/A'),
-					'gpu_fan1': __wledFormatLhmSensorDisplay(gpu_fan1 ? gpu_fan1.Value : 'N/A'),
-					'gpu_fan2': __wledFormatLhmSensorDisplay(gpu_fan2 ? gpu_fan2.Value : 'N/A'),
-					'gpu_mem_load': __wledFormatLhmSensorDisplay(gpu_mem_load ? gpu_mem_load.Value : 'N/A'),
-					'gpu_mem_used': __wledFormatLhmSensorDisplay(gpu_mem_used ? gpu_mem_used.Value : 'N/A')
-				});
-
-				lastLHMFetch.result = _format;
-				lastLHMFetch.time = now;
-			} else {
+	// Keep showing the last good matrix frame; refresh in the background (single XHR).
+	if (!lastLHMFetch._inFlight) {
+		lastLHMFetch._inFlight = true;
+		lastLHMFetch.time = now;
+		XmlHttp.Get(`${lhmjson}/data.json`, (xhr) => {
+			if (xhr.readyState !== 4) return;
+			lastLHMFetch._inFlight = false;
+			lastLHMFetch.time = Date.now();
+			if (xhr.status !== 200) {
 				device.log("HTTP error:", xhr.status);
+				return;
 			}
-		}
-	});
+			try {
+				const datajson = JSON.parse(xhr.response);
+				const built = __wledBuildLhmPairsFromJson(datajson);
+				lastLHMFetch.rawPairs = built.rawPairs;
+				lastLHMFetch.result = replaceEx(format, built.displayPairs);
+			} catch (ex) {
+				device.log("LHM JSON error: " + (ex && ex.message ? ex.message : ex));
+			}
+		});
+	}
 
-	// Always return the cached result (default "Loading..." on first call)
 	return lastLHMFetch.result;
 }
 
@@ -1082,7 +1088,11 @@ export function onLhm_updateChanged() {
 }
 
 export function onLhm_use_decimalsChanged() {
-	__wledClockResetLhmFetchCache();
+	try {
+		__wledReformatLhmFromCache(typeof lhm_format !== "undefined" ? lhm_format : "");
+	} catch (_e) {
+		__wledClockResetLhmFetchCache();
+	}
 }
 
 /** When scroll is disabled, snap matrix text/pixel-art offsets back to the start (host calls on parameter change). */
