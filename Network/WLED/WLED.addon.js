@@ -1,8 +1,4 @@
 /**
- * SPDX-FileCopyrightText: © 2026 José A Miranda Velez <admin@rgbjunkie.com>
- * SPDX-License-Identifier: LicenseRef-RGBJunkie-Proprietary
- * https://www.rgbjunkie.com
- *
  * WLED matrix add-on (loads after stock WLED.js). Keep WLED_Text.js / WLED_Text_ZH.min.js next to this file.
  */
 
