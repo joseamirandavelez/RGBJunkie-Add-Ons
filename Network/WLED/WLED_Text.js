@@ -1,10 +1,3 @@
-/**
- * SPDX-FileCopyrightText: © 2026 José A Miranda Velez <admin@rgbjunkie.com>
- * SPDX-License-Identifier: LicenseRef-RGBJunkie-Proprietary
- *
- * https://www.rgbjunkie.com
- */
-
 // @rgbj-include "../../_include/protocols/wled-glyph-helper.js"
 // Auto-migrated: sibling helper for WLED — impossible USB match; stub lifecycle for loader.
 export const rgbjunkie = {
